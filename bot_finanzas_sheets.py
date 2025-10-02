@@ -292,7 +292,7 @@ async def tipo_movimiento(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return TIPO_MOVIMIENTO
 
     context.user_data.setdefault("temp_data", {})["movimiento"] = movimiento
-    await update.message.reply_text("✍️ Ingrese la descripción del movimiento:")
+    await update.message.reply_text("✍️ ::::: Descripcion del Movimiento ::::: ")
     return DESCRIPCION
 
 async def descripcion(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -306,8 +306,7 @@ async def descripcion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     opciones_monto = [["10000", "20000", "50000"], [VOLVER_AL_MENU_OPTION]]
 
     await update.message.reply_text(
-        "💲 Ingrese el monto del movimiento:\n\n"
-        "(Puede seleccionar una opción rápida o escribir el monto)",
+       "💲 ::::: Monto ::::: ",
         reply_markup=ReplyKeyboardMarkup(opciones_monto, one_time_keyboard=True, resize_keyboard=True)
     )
     return MONTO
@@ -355,8 +354,7 @@ async def monto(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     reply_keyboard_fecha = [["Hoy", "Ayer", "Anteayer"], [VOLVER_AL_MENU_OPTION]]
     await update.message.reply_text(
-        "🗓️ Seleccione o ingrese la fecha del movimiento:\n\n"
-        "(Formato: YYYY-MM-DD, ejemplo: 2025-10-01)",
+        "🗓️ ::::: Fecha ::::: ",
         reply_markup=ReplyKeyboardMarkup(reply_keyboard_fecha, one_time_keyboard=True, resize_keyboard=True)
     )
     return FECHA
@@ -690,3 +688,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
