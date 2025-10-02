@@ -90,6 +90,7 @@ def guardar_en_sheet(sheet_object, data):
         logger.info(f"Datos guardados en {sheet_object.title}: {row_data}")
     except Exception as e:
         logger.error(f"Error al guardar en {sheet_object.title}: {e}")
+        raise
 
 def calcular_saldo_desde_movimientos(sheet_object):
     """
@@ -175,7 +176,7 @@ def escape_markdown_v2(text: str) -> str:
 # ───── MANEJADORES DE CONVERSACIÓN ─────
 async def salir_sesion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Finaliza la conversación."""
-    await update.message.reply_text("👋 Sesión finalizada\\. ¡Hasta pronto\\!", parse_mode='MarkdownV2')
+    await update.message.reply_text("👋 Sesión finalizada. ¡Hasta pronto!")
     context.user_data.clear()
     return ConversationHandler.END
 
@@ -184,7 +185,7 @@ async def volver_al_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.pop("temp_data", None)
     context.user_data.pop("selected_sheet", None)
     
-    await update.message.reply_text("🏠 Volviendo al menú principal\\.", parse_mode='MarkdownV2')
+    await update.message.reply_text("🏠 Volviendo al menú principal.")
     return await start(update, context)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -195,13 +196,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [FINALIZAR_SESION_OPTION]
     ]
     await update.message.reply_text(
-        "👋 Bienvenido\\. ¿Qué desea hacer\\?\n\n"
+        "👋 Bienvenido. ¿Qué desea hacer?\n\n"
         "1️⃣ Registrar un nuevo movimiento\n"
         "2️⃣ Consultar saldo\n"
         "3️⃣ Ver historial de movimientos\n"
         f"{FINALIZAR_SESION_OPTION}️⃣ Finalizar sesión",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True),
-        parse_mode='MarkdownV2'
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
     )
     context.user_data["temp_data"] = {}
     context.user_data["selected_sheet"] = None
@@ -244,11 +244,14 @@ async def menu_principal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return VER_ULTIMOS_MOVIMIENTOS_SELECCION_CUENTA
     else:
-        await update.message.reply_text("❌ Opción inválida\\. Por favor, elija una de las opciones numéricas\\.", parse_mode='MarkdownV2')
+        await update.message.reply_text("❌ Opción inválida. Por favor, elija una de las opciones numéricas.")
         return MENU_PRINCIPAL
 
 async def tipo_cuenta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     opcion = update.message.text.strip()
+    
+    if opcion == VOLVER_AL_MENU_OPTION:
+        return await volver_al_menu(update, context)
     
     selected_sheet_obj = None
     account_name = ""
@@ -260,7 +263,7 @@ async def tipo_cuenta(update: Update, context: ContextTypes.DEFAULT_TYPE):
         selected_sheet_obj = sheet_negocios
         account_name = SHEET_NAME_NEGOCIOS
     else:
-        await update.message.reply_text("❌ Opción inválida\\. Por favor, elija 1 para Personal o 2 para Negocio\\.", parse_mode='MarkdownV2')
+        await update.message.reply_text("❌ Opción inválida. Por favor, elija 1 para Personal o 2 para Negocio.")
         return TIPO_CUENTA
 
     context.user_data["selected_sheet"] = selected_sheet_obj
@@ -269,45 +272,51 @@ async def tipo_cuenta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_keyboard = [["1", "2"], [VOLVER_AL_MENU_OPTION]]
     await update.message.reply_text(
         "➡️ Indique el tipo de movimiento:\n\n"
-        "1️⃣ Crédito \\(\\+\\)\n"
-        "2️⃣ Débito \\(\\-\\)\n"
+        "1️⃣ Crédito (+)\n"
+        "2️⃣ Débito (-)\n"
         f"{VOLVER_AL_MENU_OPTION}️⃣ Volver al menú",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True),
-        parse_mode='MarkdownV2'
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
     )
     return TIPO_MOVIMIENTO
 
 async def tipo_movimiento(update: Update, context: ContextTypes.DEFAULT_TYPE):
     opcion = update.message.text.strip()
+    
+    if opcion == VOLVER_AL_MENU_OPTION:
+        return await volver_al_menu(update, context)
         
     movimiento = "Crédito" if opcion == "1" else "Débito" if opcion == "2" else None
 
     if not movimiento:
-        await update.message.reply_text("❌ Opción inválida\\. Por favor, elija 1 para Crédito o 2 para Débito\\.", parse_mode='MarkdownV2')
+        await update.message.reply_text("❌ Opción inválida. Por favor, elija 1 para Crédito o 2 para Débito.")
         return TIPO_MOVIMIENTO
 
     context.user_data.setdefault("temp_data", {})["movimiento"] = movimiento
-    await update.message.reply_text(
-        "✍️ ::::: Descripcion del Movimiento ::::: ",
-        parse_mode='MarkdownV2'
-    )
+    await update.message.reply_text("✍️ Ingrese la descripción del movimiento:")
     return DESCRIPCION
 
 async def descripcion(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    texto = update.message.text.strip()
+    
+    if texto == VOLVER_AL_MENU_OPTION:
+        return await volver_al_menu(update, context)
         
-    context.user_data.setdefault("temp_data", {})["descripcion"] = update.message.text
+    context.user_data.setdefault("temp_data", {})["descripcion"] = texto
     
     opciones_monto = [["10000", "20000", "50000"], [VOLVER_AL_MENU_OPTION]]
 
     await update.message.reply_text(
-        "💲 ::::: Monto ::::: ",
-        reply_markup=ReplyKeyboardMarkup(opciones_monto, one_time_keyboard=True, resize_keyboard=True),
-        parse_mode='MarkdownV2'
+        "💲 Ingrese el monto del movimiento:\n\n"
+        "(Puede seleccionar una opción rápida o escribir el monto)",
+        reply_markup=ReplyKeyboardMarkup(opciones_monto, one_time_keyboard=True, resize_keyboard=True)
     )
     return MONTO
 
 async def monto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     monto_str_input = update.message.text.strip()
+    
+    if monto_str_input == VOLVER_AL_MENU_OPTION:
+        return await volver_al_menu(update, context)
         
     monto_valor = None
     
@@ -328,10 +337,9 @@ async def monto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Validación principal: el monto debe ser un número positivo.
         if monto_valor <= 0:
             await update.message.reply_text(
-                "❌ Monto inválido\\. Debe ser un número entero positivo\\. Intente de nuevo:\n"
-                f"O escriba '{VOLVER_AL_MENU_OPTION}' para volver al menú\\.",
-                reply_markup=ReplyKeyboardMarkup(opciones_monto_keyboard, one_time_keyboard=True, resize_keyboard=True),
-                parse_mode='MarkdownV2'
+                "❌ Monto inválido. Debe ser un número entero positivo. Intente de nuevo:\n"
+                f"O escriba '{VOLVER_AL_MENU_OPTION}' para volver al menú.",
+                reply_markup=ReplyKeyboardMarkup(opciones_monto_keyboard, one_time_keyboard=True, resize_keyboard=True)
             )
             return MONTO
             
@@ -339,27 +347,37 @@ async def monto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError as e:
         logger.error(f"Error al procesar monto: {e} - Input: '{monto_str_input}'")
         await update.message.reply_text(
-            "❌ Monto inválido\\. Por favor, ingrese un número entero positivo sin decimales \\(ej\\. 100, 500, \\$2345, 2,345\\)\\. Intente de nuevo:\n"
-            f"O escriba '{VOLVER_AL_MENU_OPTION}' para volver al menú\\.",
-            reply_markup=ReplyKeyboardMarkup(opciones_monto_keyboard, one_time_keyboard=True, resize_keyboard=True),
-            parse_mode='MarkdownV2'
+            "❌ Monto inválido. Por favor, ingrese un número entero positivo sin decimales (ej. 100, 500, $2345, 2,345). Intente de nuevo:\n"
+            f"O escriba '{VOLVER_AL_MENU_OPTION}' para volver al menú.",
+            reply_markup=ReplyKeyboardMarkup(opciones_monto_keyboard, one_time_keyboard=True, resize_keyboard=True)
         )
         return MONTO
 
     reply_keyboard_fecha = [["Hoy", "Ayer", "Anteayer"], [VOLVER_AL_MENU_OPTION]]
     await update.message.reply_text(
-        "🗓️ ::::: Fecha ::::: ",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard_fecha, one_time_keyboard=True, resize_keyboard=True),
-        parse_mode='MarkdownV2'
+        "🗓️ Seleccione o ingrese la fecha del movimiento:\n\n"
+        "(Formato: YYYY-MM-DD, ejemplo: 2025-10-01)",
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard_fecha, one_time_keyboard=True, resize_keyboard=True)
     )
     return FECHA
 
 async def fecha(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Maneja la entrada de fecha y completa el registro del movimiento.
+    Versión con manejo robusto de errores y logging detallado.
+    """
     fecha_str_input = update.message.text.strip()
+    
+    logger.info(f"=== INICIO fecha() - Input: '{fecha_str_input}' ===")
+    
+    # Manejar opción de volver al menú
+    if fecha_str_input == VOLVER_AL_MENU_OPTION:
+        return await volver_al_menu(update, context)
         
     today = datetime.today()
     fecha_a_guardar = ""
 
+    # Procesar la fecha
     if fecha_str_input.lower() == "hoy":
         fecha_a_guardar = today.strftime('%Y-%m-%d')
     elif fecha_str_input.lower() == "ayer":
@@ -371,56 +389,144 @@ async def fecha(update: Update, context: ContextTypes.DEFAULT_TYPE):
             datetime.strptime(fecha_str_input, '%Y-%m-%d')
             fecha_a_guardar = fecha_str_input
         except ValueError:
+            logger.warning(f"Fecha inválida: {fecha_str_input}")
             reply_keyboard_fecha = [["Hoy", "Ayer", "Anteayer"], [VOLVER_AL_MENU_OPTION]]
             await update.message.reply_text(
-                "❌ Formato de fecha inválido\\. Por favor, elija una opción o ingrese la fecha en formato YYYY\\-MM\\-DD:\n"
-                f"O escriba '{VOLVER_AL_MENU_OPTION}' para volver al menú\\.",
-                reply_markup=ReplyKeyboardMarkup(reply_keyboard_fecha, one_time_keyboard=True, resize_keyboard=True),
-                parse_mode='MarkdownV2'
+                "❌ Formato de fecha inválido. Por favor, elija una opción o ingrese la fecha en formato YYYY-MM-DD:\n\n"
+                f"Ejemplo: 2025-01-15\n\n"
+                f"O escriba '{VOLVER_AL_MENU_OPTION}' para volver al menú.",
+                reply_markup=ReplyKeyboardMarkup(reply_keyboard_fecha, one_time_keyboard=True, resize_keyboard=True)
             )
             return FECHA
 
+    logger.info(f"Fecha procesada: {fecha_a_guardar}")
+
+    # Guardar la fecha en los datos temporales
     user_temp_data = context.user_data.setdefault("temp_data", {})
     user_temp_data["fecha"] = fecha_a_guardar
     
+    # Obtener la hoja seleccionada
     selected_sheet_obj = context.user_data.get("selected_sheet")
-    account_name = user_temp_data.get("account_name", "la cuenta seleccionada") 
+    account_name = user_temp_data.get("account_name", "la cuenta seleccionada")
 
+    logger.info(f"Cuenta seleccionada: {account_name}")
+    logger.info(f"Datos a guardar: {user_temp_data}")
+
+    # Validar que exista una hoja seleccionada
     if not selected_sheet_obj:
-        await update.message.reply_text("❌ Error: No se seleccionó una cuenta\\. Por favor, reinicie con /start\\.", parse_mode='MarkdownV2')
-        return ConversationHandler.END 
+        logger.error("No se encontró selected_sheet_obj")
+        await update.message.reply_text(
+            "❌ Error: No se seleccionó una cuenta. Por favor, reinicie con /start."
+        )
+        context.user_data.clear()
+        return ConversationHandler.END
 
-    guardar_en_sheet(selected_sheet_obj, user_temp_data)
-
-    saldo_actual = calcular_saldo_desde_movimientos(selected_sheet_obj)
+    # ═══════════════════════════════════════════════════════
+    # GUARDAR EN GOOGLE SHEETS
+    # ═══════════════════════════════════════════════════════
+    try:
+        logger.info(f"Guardando en Google Sheets...")
+        guardar_en_sheet(selected_sheet_obj, user_temp_data)
+        logger.info("✓ Guardado exitoso en Google Sheets")
+    except Exception as e:
+        logger.error(f"Error al guardar en Google Sheets: {e}", exc_info=True)
+        await update.message.reply_text(
+            f"⚠️ Error al guardar el movimiento: {str(e)}\n\n"
+            "Por favor, intente nuevamente."
+        )
+        return FECHA
     
+    # ═══════════════════════════════════════════════════════
+    # CALCULAR SALDO ACTUALIZADO
+    # ═══════════════════════════════════════════════════════
+    try:
+        logger.info("Calculando saldo...")
+        saldo_actual = calcular_saldo_desde_movimientos(selected_sheet_obj)
+        logger.info(f"✓ Saldo calculado: {saldo_actual}")
+    except Exception as e:
+        logger.error(f"Error al calcular saldo: {e}", exc_info=True)
+        saldo_actual = 0
+    
+    # ═══════════════════════════════════════════════════════
+    # PREPARAR DATOS PARA EL MENSAJE
+    # ═══════════════════════════════════════════════════════
+    movimiento_tipo = user_temp_data.get("movimiento", "N/A")
+    descripcion_mov = user_temp_data.get("descripcion", "Sin descripción")
+    monto_mov = user_temp_data.get("monto", 0)
+    
+    logger.info("Preparando mensaje de confirmación...")
+    
+    # ═══════════════════════════════════════════════════════
+    # LIMPIAR DATOS TEMPORALES
+    # ═══════════════════════════════════════════════════════
     context.user_data.pop("temp_data", None)
     context.user_data.pop("selected_sheet", None)
+    logger.info("Datos temporales limpiados")
 
-    reply_keyboard = [["1", "2"], ["3"], [FINALIZAR_SESION_OPTION]]
+    # ═══════════════════════════════════════════════════════
+    # TECLADO DEL MENÚ PRINCIPAL
+    # ═══════════════════════════════════════════════════════
+    reply_keyboard = [
+        ["1", "2"],
+        ["3"],
+        [FINALIZAR_SESION_OPTION]
+    ]
     
-    # --- CAMBIO AQUÍ: Escapar el saldo formateado para MarkdownV2 ---
-    formatted_saldo_text = f"{saldo_actual:,.0f}"
-    escaped_saldo_text = escape_markdown_v2(formatted_saldo_text)
-    # -----------------------------------------------------------------
-
-    await update.message.reply_text(
-        f"✅ Movimiento registrado exitosamente en \\'{escape_markdown_v2(account_name)}\\'\\.\n"
-        f"------------------------------------------------.\n"
-        f"💰 Su saldo actual en \\'{escape_markdown_v2(account_name)}\\' es: ::::  \\${escaped_saldo_text}\n\n" # Usar escaped_saldo_text
-          f"------------------------------------------------.\n"
-        f"¿Qué desea hacer ahora\\?\n"
-        "1️⃣ Registrar un nuevo movimiento\n"
-        "2️⃣ Consultar saldo\n"
-        "3️⃣ Ver historial de movimientos\n"
-        f"{FINALIZAR_SESION_OPTION}️⃣ Finalizar sesión",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True),
-        parse_mode='MarkdownV2'
+    # ═══════════════════════════════════════════════════════
+    # MENSAJE DE CONFIRMACIÓN - VERSIÓN SIMPLE (SIN MARKDOWN)
+    # ═══════════════════════════════════════════════════════
+    mensaje_confirmacion = (
+        f"✅ ¡MOVIMIENTO REGISTRADO EXITOSAMENTE!\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📋 DETALLES DEL REGISTRO\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"🏦 Cuenta: {account_name}\n"
+        f"📊 Tipo: {movimiento_tipo}\n"
+        f"📝 Descripción: {descripcion_mov}\n"
+        f"💵 Monto: ${monto_mov:,}\n"
+        f"📅 Fecha: {fecha_a_guardar}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"💰 SALDO ACTUAL\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"Saldo en {account_name}: ${saldo_actual:,.0f}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"🔽 ¿Qué desea hacer ahora?\n\n"
+        f"1️⃣ Registrar un nuevo movimiento\n"
+        f"2️⃣ Consultar saldo\n"
+        f"3️⃣ Ver historial de movimientos\n"
+        f"{FINALIZAR_SESION_OPTION}️⃣ Finalizar sesión"
     )
-    return await start(update, context)
+    
+    # ═══════════════════════════════════════════════════════
+    # ENVIAR MENSAJE CON MANEJO DE ERRORES
+    # ═══════════════════════════════════════════════════════
+    try:
+        logger.info("Enviando mensaje de confirmación...")
+        await update.message.reply_text(
+            mensaje_confirmacion,
+            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
+        )
+        logger.info("✓ Mensaje de confirmación enviado exitosamente")
+    except Exception as e:
+        logger.error(f"ERROR al enviar mensaje de confirmación: {e}", exc_info=True)
+        # Intentar enviar un mensaje más simple
+        try:
+            await update.message.reply_text(
+                f"✅ Movimiento guardado en {account_name}\n"
+                f"Saldo actual: ${saldo_actual:,.0f}",
+                reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
+            )
+        except Exception as e2:
+            logger.error(f"ERROR al enviar mensaje simple: {e2}", exc_info=True)
+    
+    logger.info("=== FIN fecha() - Retornando MENU_PRINCIPAL ===")
+    return MENU_PRINCIPAL
 
 async def ver_saldo_seleccion_cuenta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     opcion = update.message.text.strip()
+    
+    if opcion == VOLVER_AL_MENU_OPTION:
+        return await volver_al_menu(update, context)
         
     selected_sheet_for_saldo = None
     account_name = ""
@@ -432,23 +538,17 @@ async def ver_saldo_seleccion_cuenta(update: Update, context: ContextTypes.DEFAU
         selected_sheet_for_saldo = sheet_negocios
         account_name = SHEET_NAME_NEGOCIOS
     else:
-        await update.message.reply_text("❌ Opción inválida\\. Por favor, elija 1 para Personal o 2 para Negocio\\.", parse_mode='MarkdownV2')
+        await update.message.reply_text("❌ Opción inválida. Por favor, elija 1 para Personal o 2 para Negocio.")
         return VER_SALDO_SELECCION_CUENTA 
 
     if selected_sheet_for_saldo:
         saldo = calcular_saldo_desde_movimientos(selected_sheet_for_saldo)
         
-        # --- CAMBIO AQUÍ: Escapar el saldo formateado para MarkdownV2 ---
-        formatted_saldo_text = f"{saldo:,.0f}"
-        escaped_saldo_text = escape_markdown_v2(formatted_saldo_text)
-        # -----------------------------------------------------------------
-
         await update.message.reply_text(
-            f"💰 Su saldo actual en \\'{escape_markdown_v2(account_name)}\\' es: \\${escaped_saldo_text}", # Usar escaped_saldo_text
-            parse_mode='MarkdownV2'
+            f"💰 Su saldo actual en '{account_name}' es: ${saldo:,.0f}"
         )
     else:
-        await update.message.reply_text("🚫 Hubo un error al seleccionar la cuenta\\. Por favor, intente de nuevo\\.", parse_mode='MarkdownV2')
+        await update.message.reply_text("🚫 Hubo un error al seleccionar la cuenta. Por favor, intente de nuevo.")
     
     return await start(update, context)
 
@@ -458,6 +558,9 @@ async def ver_ultimos_movimientos_seleccion_cuenta(update: Update, context: Cont
     Esto asegura la alineación en la mayoría de los clientes de Telegram.
     """
     opcion = update.message.text.strip()
+    
+    if opcion == VOLVER_AL_MENU_OPTION:
+        return await volver_al_menu(update, context)
         
     selected_sheet_for_moves = None
     account_name = ""
@@ -469,7 +572,7 @@ async def ver_ultimos_movimientos_seleccion_cuenta(update: Update, context: Cont
         selected_sheet_for_moves = sheet_negocios
         account_name = SHEET_NAME_NEGOCIOS
     else:
-        await update.message.reply_text("❌ Opción inválida\\. Por favor, elija 1 para Personal o 2 para Negocio\\.", parse_mode='MarkdownV2')
+        await update.message.reply_text("❌ Opción inválida. Por favor, elija 1 para Personal o 2 para Negocio.")
         return VER_ULTIMOS_MOVIMIENTOS_SELECCION_CUENTA
 
     if selected_sheet_for_moves:
@@ -523,17 +626,15 @@ async def ver_ultimos_movimientos_seleccion_cuenta(update: Update, context: Cont
 
             moves_table_text = "\n".join([formatted_header, separator_line] + data_rows_formatted)
 
-            escaped_account_name = escape_markdown_v2(account_name)
-
             await update.message.reply_text(
-                f"📄 \\*\\*Historial de Movimientos Recientes en \\'{escaped_account_name}\\'\\:\\*\\*\n\n"
+                f"📄 **Historial de Movimientos Recientes en '{account_name}':**\n\n"
                 f"```\n{moves_table_text}\n```",
-                parse_mode='MarkdownV2' 
+                parse_mode='Markdown'
             )
         else:
-            await update.message.reply_text(f"No hay movimientos registrados en \\'{escape_markdown_v2(account_name)}\\' aún\\.", parse_mode='MarkdownV2')
+            await update.message.reply_text(f"No hay movimientos registrados en '{account_name}' aún.")
     else:
-        await update.message.reply_text("🚫 Hubo un error al seleccionar la cuenta\\. Por favor, intente de nuevo\\.", parse_mode='MarkdownV2')
+        await update.message.reply_text("🚫 Hubo un error al seleccionar la cuenta. Por favor, intente de nuevo.")
     
     return await start(update, context)
 
@@ -589,5 +690,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
