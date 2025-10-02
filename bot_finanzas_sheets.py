@@ -417,7 +417,7 @@ async def fecha(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True),
         parse_mode='MarkdownV2'
     )
-    return MENU_PRINCIPAL
+    return await start(update, context)
 
 async def ver_saldo_seleccion_cuenta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     opcion = update.message.text.strip()
@@ -589,4 +589,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
